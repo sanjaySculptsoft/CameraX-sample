@@ -86,9 +86,9 @@ class MainActivity : BaseActivity() {
         binding?.cameraCaptureButton?.setOnClickListener {
             takePhoto()
         }
-//        binding?.cameraSwitch?.setOnClickListener {
-//            flipCamera()
-//        }
+        binding?.btnSwitchCamera?.setOnClickListener {
+            flipCamera()
+        }
     }
 
     override fun loadData() {
