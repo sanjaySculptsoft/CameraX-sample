@@ -10,5 +10,5 @@
 
     <color name="black_900">#000000</color>
     <color name="black_900_40alpha">#66000000</color>
-
+   <color name="yellow">#FFFF00</color>
 </resources>

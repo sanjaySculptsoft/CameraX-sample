@@ -2,6 +2,7 @@ package com.example.cameraxapp
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -20,6 +21,7 @@ import com.example.cameraxapp.util.BitmapUtils
 import com.example.cameraxapp.util.afterMeasured
 import com.example.cameraxapp.util.getOutputDirectory
 import com.example.cameraxapp.extension.saveImageToGallery
+import com.example.cameraxapp.util.setZoomLevel
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -88,6 +90,22 @@ class MainActivity : BaseActivity() {
         }
         binding?.btnSwitchCamera?.setOnClickListener {
             flipCamera()
+        }
+
+        binding?.btnGallery?.setOnClickListener {
+            // open gallery if not clicked any images otherwise open recent images
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.type = "image/*"
+            startActivity(intent)
+        }
+        binding?.btn06x?.setOnClickListener {
+            camera?.setZoomLevel(0.6f)
+        }
+        binding?.btn3x?.setOnClickListener {
+            camera?.setZoomLevel(3.0f)
+        }
+        binding?.btn1x?.setOnClickListener {
+            camera?.setZoomLevel(1.0f)
         }
     }
 
@@ -258,6 +276,17 @@ class MainActivity : BaseActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    // Method to perform manual focus
+    private fun setFocusPoint(x: Float, y: Float) {
+        val meteringPointFactory = binding?.viewFinderPreview?.meteringPointFactory
+        val point = meteringPointFactory?.createPoint(x, y)
+        val action = point?.let {
+            FocusMeteringAction.Builder(it, FocusMeteringAction.FLAG_AF)
+                .build()
+        }
+
+        action?.let { camera?.cameraControl?.startFocusAndMetering(it) }
+    }
 
     //    First, you define a configuration object that is used to instantiate the actual use case object
     //    Implement ImageCapture use case
