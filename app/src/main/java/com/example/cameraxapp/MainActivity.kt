@@ -4,8 +4,14 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -13,6 +19,7 @@ import android.widget.Toast
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import com.example.cameraxapp.activities.BaseActivity
 import com.example.cameraxapp.databinding.ActivityMainBinding
@@ -107,6 +114,10 @@ class MainActivity : BaseActivity() {
         binding?.btn1x?.setOnClickListener {
             camera?.setZoomLevel(1.0f)
         }
+
+        binding?.txtPortrait?.setOnClickListener {
+            capturePortraitImage()
+        }
     }
 
     override fun loadData() {
@@ -199,11 +210,8 @@ class MainActivity : BaseActivity() {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(
-                    this,
-                    "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this,
+                    "Permissions not granted by the user.", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -336,6 +344,66 @@ class MainActivity : BaseActivity() {
             }
         })
     }
+    // Capture the image and apply portrait effect
+    private fun capturePortraitImage() {
+        val photoFile = File(outputDirectory,
+            SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis()) + ".jpg")
+        val outputOption = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        imageCapture?.takePicture(
+            outputOption,
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+
+                    val savedUri =  Uri.fromFile(photoFile)
+                    Log.d(TAG, "onImageSaved: ${savedUri}")
+                    Log.d(TAG, "onImageSaved: ${savedUri?.path}")
+                    // Process the captured image with portrait effect
+                    val bitmap = BitmapFactory.decodeFile(savedUri.path)
+                    val processedBitmap = applyPortraitEffect(bitmap)
+
+                    // Display or save the processed image
+//                    imageView.setImageBitmap(processedBitmap)
+
+//                    val savedUri =  Uri.fromFile(photoFile)
+//                    val msg = "Photo capture succeeded: $savedUri"
+//                    Log.d(TAG, "onImageSaved: ${Uri.fromFile(photoFile)}")
+//                    Log.d(TAG, "onImageSaved: ${outputFileResults.savedUri}")
+                    saveImageToGallery(BitmapUtils.uriToBitmap(this@MainActivity, savedUri)) {
+                        Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onError(exc: ImageCaptureException) {
+                    Log.d(TAG, "Photo capture failed: ${exc.message}", exc)
+                }
+
+            },
+        )
+    }
+
+
+    // Apply the portrait effect to the image using depth information
+    private fun applyPortraitEffect(inputBitmap: Bitmap): Bitmap {
+        // Apply depth-based segmentation or blur algorithms to create the portrait effect
+        // You can use depth data if available, or apply other image processing techniques
+
+        // Example: Apply a simple Gaussian blur to the background
+        val radius = 25f
+        val blurredBitmap = inputBitmap.copy(inputBitmap.config, true)
+        val blurScript = RenderScript.create(this)
+        val blurInput = Allocation.createFromBitmap(blurScript, inputBitmap)
+        val blurOutput = Allocation.createFromBitmap(blurScript, blurredBitmap)
+        val blurBuilder = ScriptIntrinsicBlur.create(blurScript, Element.U8_4(blurScript))
+        blurBuilder.setInput(blurInput)
+        blurBuilder.setRadius(radius)
+        blurBuilder.forEach(blurOutput)
+        blurOutput.copyTo(blurredBitmap)
+        blurScript.destroy()
+
+        return blurredBitmap
+    }
 
     // tap to focus implementation
     //    CameraX supports autofocus, but want to make the ability to manually control the focus target.
@@ -350,6 +418,7 @@ class MainActivity : BaseActivity() {
 //        // Execute focus action
 //        cameraControl.startFocusAndMetering(action);
 //    }
+
 
 
 }
